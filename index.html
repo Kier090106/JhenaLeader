@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Sign Up</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container" id="container">
+        <div class="form-container sign-up-container">
+            <form id="signupForm">
+                <h1>Create Account</h1>
+                <input type="text" placeholder="Username" id="signupUsername" required />
+                <input type="password" placeholder="Password" id="signupPassword" required />
+                <button type="submit">Sign Up</button>
+            </form>
+        </div>
+        <div class="form-container sign-in-container">
+            <form id="loginForm">
+                <h1>Sign In</h1>
+                <input type="text" placeholder="Username" id="loginUsername" required />
+                <input type="password" placeholder="Password" id="loginPassword" required />
+                <button type="submit">Login</button>
+            </form>
+        </div>
+        <div class="overlay-container">
+            <div class="overlay">
+                <div class="overlay-panel overlay-left">
+                    <h1>Welcome Back!</h1>
+                    <p>To keep connected with us, please login with your personal info</p>
+                    <button class="ghost" id="signIn">Sign In</button>
+                </div>
+                <div class="overlay-panel overlay-right">
+                    <h1>Hello, Friend!</h1>
+                    <p>Enter your personal details and start your journey with us</p>
+                    <button class="ghost" id="signUp">Sign Up</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert -->
+    <div id="customAlert" class="custom-alert hidden">
+        <p id="alertMessage"></p>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
+        import { getDatabase, ref, set, get, child, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB67uiJimmxOzTO0XCDIof91OsIPYJTXbo",
+            authDomain: "siguploginform.firebaseapp.com",
+            databaseURL: "https://siguploginform-default-rtdb.firebaseio.com/",
+            projectId: "siguploginform",
+            storageBucket: "siguploginform.appspot.com",
+            messagingSenderId: "73924877240",
+            appId: "1:73924877240:web:1e191859236b6887074d4d",
+            measurementId: "G-CXWZ3K1DVF"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        
+        const container = document.getElementById('container');
+        const signUpButton = document.getElementById('signUp');
+        const signInButton = document.getElementById('signIn');
+
+        signUpButton.addEventListener('click', () => {
+            container.classList.add('right-panel-active');
+        });
+
+        signInButton.addEventListener('click', () => {
+            container.classList.remove('right-panel-active');
+        });
+
+        // Custom alert function to show the styled alert
+        function showAlert(message, type = 'error') {
+            const alertBox = document.getElementById('customAlert');
+            const alertMessage = document.getElementById('alertMessage');
+
+            alertMessage.textContent = message;
+            alertBox.className = `custom-alert ${type} show`;
+
+            setTimeout(() => {
+                alertBox.classList.remove('show');
+                alertBox.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Handle signup w
+        document.getElementById('signupForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const username = document.getElementById('signupUsername').value;
+            const password = document.getElementById('signupPassword').value;
+
+            // Ensure the password meets the validation criteria
+            if (!isValidPassword(password)) {
+                showAlert("Password must be at least 8 characters, contain numbers and uppercase letters.", 'error');
+                return; // Stop execution if the password is invalid
+            }
+
+            const usernameRef = ref(db, 'users');
+            const q = query(usernameRef, orderByChild('username'), equalTo(username));
+
+            get(q).then((snapshot) => {
+                if (snapshot.exists()) {
+                    showAlert("Username already exists!", 'error');
+                } else {
+                    // If username doesn't exist, create a new user
+                    set(ref(db, 'users/' + username), {
+                        username: username,
+                        password: password
+                    })
+                    .then(() => {
+                        showAlert("Sign Up Successful", 'success');
+                    })
+                    .catch((error) => {
+                        console.error("Error signing up:", error); // Log the error for debugging
+                        showAlert("Error signing up, please try again.", 'error');
+                    });
+                }
+            }).catch((error) => {
+                console.error("Error checking username:", error); // Log the error for debugging
+                showAlert("Error checking username, please try again.", 'error');
+            });
+        });
+
+        // Handle login 
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            const usernameRef = ref(db, 'users');
+            const q = query(usernameRef, orderByChild('username'), equalTo(username));
+
+            get(q).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const user = snapshot.val();
+                    const userData = Object.values(user)[0]; // Get the first user object
+
+                    if (userData.password !== password) {
+                        showAlert("Password incorrect!", 'error');
+                    } else {
+                        showAlert(`Login Successful\nUsername: ${username}`, 'success');
+                        setTimeout(() => {
+                            window.location.href = 'dashboard.html'; 
+                        }, 1000);
+                    }
+                } else {
+                    showAlert("Username incorrect!", 'error');
+                }
+            }).catch((error) => {
+                showAlert("Error logging in, please try again.", 'error');
+            });
+        });
+
+        // Password validation helper function
+        function isValidPassword(password) {
+            return password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
+        }
+    </script>
+</body>
+</html>
